@@ -2245,106 +2245,137 @@ MuseScore {
         questionHistory = ["start"]
     }
     
+    // Build breadcrumb string from answer history
+    function buildBreadcrumb() {
+        if (answerHistory.length === 0) return ""
+        var crumbs = []
+        for (var i = 0; i < answerHistory.length; i++) {
+            crumbs.push(answerHistory[i].answer)
+        }
+        return crumbs.join("  ›  ")
+    }
+
     // Main UI
     Rectangle {
         anchors.fill: parent
         color: ui.theme.backgroundPrimaryColor
-        
+
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 20
-            spacing: 15
-            
+            spacing: 12
+
             // Header
-            Rectangle {
+            ColumnLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 80
-                color: ui.theme.backgroundSecondaryColor
-                radius: 4
-                border.width: 1
-                border.color: ui.theme.strokeColor
-                
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 15
-                    spacing: 5
-                    
+                spacing: 4
+
+                RowLayout {
+                    Layout.fillWidth: true
+
                     Text {
                         text: "Composition Tutor"
                         color: ui.theme.fontPrimaryColor
                         font.pixelSize: 22
                         font.bold: true
                     }
-                    
+
+                    Item { Layout.fillWidth: true }
+
                     Text {
                         text: selectionInfo !== "" ? selectionInfo : "No passage selected"
-                        color: selectionInfo !== "" ? ui.theme.fontPrimaryColor : "#ff6b6b"
-                        font.pixelSize: 14
+                        color: selectionInfo !== "" ? ui.theme.fontSecondaryColor : "#ff6b6b"
+                        font.pixelSize: 13
                     }
                 }
+
+                // Breadcrumb trail
+                Text {
+                    visible: answerHistory.length > 0
+                    text: buildBreadcrumb()
+                    color: ui.theme.fontSecondaryColor
+                    font.pixelSize: 12
+                    elide: Text.ElideLeft
+                    Layout.fillWidth: true
+                    opacity: 0.7
+                }
+
+                // Accent underline
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 2
+                    color: ui.theme.accentColor
+                    opacity: 0.6
+                }
             }
-            
-            //Item { Layout.preferredHeight: 20 }
-            
+
             // Content area (either questions or diagnostic)
             Rectangle {
                 Layout.fillWidth: true
-                //Layout.fillHeight: true
-                Layout.preferredHeight: 600
+                Layout.fillHeight: true
                 color: ui.theme.backgroundSecondaryColor
-                radius: 4
+                radius: 6
                 border.width: 1
                 border.color: ui.theme.strokeColor
-                
+
                 ScrollView {
                     anchors.fill: parent
                     anchors.margins: 20
                     clip: true
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    
+
                     ColumnLayout {
+                        id: contentColumn
                         width: parent.parent.width - 40
                         spacing: 20
-                        
-                        // Show either question or diagnostic
-                        Loader {
+
+                        // Content with fade transition
+                        Item {
+                            id: contentWrapper
                             Layout.fillWidth: true
-                            sourceComponent: showingDiagnostic ? diagnosticComponent : questionComponent
+                            Layout.preferredHeight: contentLoader.item ? contentLoader.item.implicitHeight : 0
+
+                            Loader {
+                                id: contentLoader
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                sourceComponent: showingDiagnostic ? diagnosticComponent : questionComponent
+
+                                // Fade in on source change
+                                onSourceComponentChanged: {
+                                    fadeIn.restart()
+                                }
+
+                                opacity: 0
+                                NumberAnimation on opacity {
+                                    id: fadeIn
+                                    from: 0; to: 1
+                                    duration: 200
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
                         }
                     }
                 }
             }
-            
-            // Navigation buttons
-            Rectangle {
+
+            // Navigation — inline, no box
+            RowLayout {
                 visible: currentQuestion && currentQuestion.id !== "start"
                 Layout.fillWidth: true
-                Layout.preferredHeight: 60
-                Layout.minimumHeight: 60
-                color: ui.theme.backgroundSecondaryColor
-                radius: 4
-                border.width: 1
-                border.color: ui.theme.strokeColor
-                
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    spacing: 10
-                    
-                    MU.FlatButton {
-                        text: "← Back"
-                        enabled: questionHistory.length > 0
-                        Layout.preferredWidth: 120
-                        onClicked: goBack()
-                    }
+                spacing: 10
 
-                    Item { Layout.fillWidth: true }
+                MU.FlatButton {
+                    text: "← Back"
+                    enabled: questionHistory.length > 0
+                    onClicked: goBack()
+                }
 
-                    MU.FlatButton {
-                        text: "Reset"
-                        Layout.preferredWidth: 120
-                        onClicked: resetTool()
-                    }
+                Item { Layout.fillWidth: true }
+
+                MU.FlatButton {
+                    text: "Start Over"
+                    onClicked: resetTool()
                 }
             }
         }
@@ -2380,14 +2411,17 @@ MuseScore {
                 
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.maximumWidth: 300
-                    Layout.minimumHeight: 60
-                    Layout.preferredHeight: contentCol.implicitHeight + 30
-                    color: optionMouseArea.containsMouse ? ui.theme.strokeColorlight : ui.theme.buttonColor
-                    border.color: ui.theme.strokeColor
-                    border.width: 1
+                    Layout.minimumHeight: 50
+                    Layout.preferredHeight: contentCol.implicitHeight + 24
+                    color: optionMouseArea.containsMouse ? ui.theme.backgroundTertiaryColor : ui.theme.buttonColor
+                    border.color: optionMouseArea.containsMouse ? ui.theme.accentColor : ui.theme.strokeColor
+                    border.width: optionMouseArea.containsMouse ? 2 : 1
                     radius: 6
-                    
+
+                    // Smooth hover transition
+                    Behavior on border.color { ColorAnimation { duration: 120 } }
+                    Behavior on color { ColorAnimation { duration: 120 } }
+
                     MouseArea {
                         id: optionMouseArea
                         anchors.fill: parent
@@ -2395,29 +2429,56 @@ MuseScore {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: selectOption(index)
                     }
-                    
-                    ColumnLayout {
+
+                    RowLayout {
                         id: contentCol
                         anchors.fill: parent
-                        anchors.margins: 15
-                        spacing: 5
-                        
-                        Text {
-                            text: modelData.text
-                            color: ui.theme.fontPrimaryColor
-                            font.pixelSize: 17
-                            font.bold: modelData.subtitle === ""
-                            wrapMode: Text.WordWrap
-                            Layout.fillWidth: true
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        anchors.topMargin: 12
+                        anchors.bottomMargin: 12
+                        spacing: 8
+
+                        // Accent pip on hover
+                        Rectangle {
+                            Layout.preferredWidth: 3
+                            Layout.fillHeight: true
+                            radius: 2
+                            color: ui.theme.accentColor
+                            opacity: optionMouseArea.containsMouse ? 1.0 : 0.0
+                            Behavior on opacity { NumberAnimation { duration: 120 } }
                         }
-                        
-                        Text {
-                            text: modelData.subtitle
-                            color: ui.theme.fontSecondaryColor
-                            font.pixelSize: 14
-                            visible: modelData.subtitle !== ""
-                            wrapMode: Text.WordWrap
+
+                        ColumnLayout {
                             Layout.fillWidth: true
+                            spacing: 3
+
+                            Text {
+                                text: modelData.text
+                                color: ui.theme.fontPrimaryColor
+                                font.pixelSize: 16
+                                font.bold: true
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                            }
+
+                            Text {
+                                text: modelData.subtitle
+                                color: ui.theme.fontSecondaryColor
+                                font.pixelSize: 13
+                                visible: modelData.subtitle !== ""
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        // Arrow hint on hover
+                        Text {
+                            text: "›"
+                            color: ui.theme.accentColor
+                            font.pixelSize: 20
+                            opacity: optionMouseArea.containsMouse ? 1.0 : 0.0
+                            Behavior on opacity { NumberAnimation { duration: 120 } }
                         }
                     }
                 }
@@ -2493,106 +2554,135 @@ MuseScore {
             // Section 1: Diagnostic Reframing
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 10
-                
-                Text {
-                    text: "DIAGNOSTIC REFRAMING"
-                    color: ui.theme.accentColor
-                    font.pixelSize: 16
-                    font.bold: true
+                spacing: 12
+
+                RowLayout {
+                    spacing: 8
+                    Rectangle { width: 4; height: 18; radius: 2; color: ui.theme.accentColor }
+                    Text {
+                        text: "DIAGNOSTIC REFRAMING"
+                        color: ui.theme.fontPrimaryColor
+                        font.pixelSize: 13
+                        font.bold: true
+                        font.letterSpacing: 1.5
+                    }
                 }
-                
+
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 2
-                    color: ui.theme.strokeColor
+                    Layout.leftMargin: 12
+                    height: 1
+                    color: ui.theme.accentColor
+                    opacity: 0.3
                 }
-                
+
                 TextEdit {
                     text: diagnosticData ? diagnosticData.reframing : ""
                     color: ui.theme.fontPrimaryColor
-                    font.pixelSize: 16
+                    font.pixelSize: 15
                     wrapMode: TextEdit.WordWrap
                     Layout.fillWidth: true
+                    Layout.leftMargin: 12
                     readOnly: true
                     selectByMouse: true
                     textFormat: TextEdit.PlainText
+                    lineHeight: 1.3
                 }
             }
-            
+
             // Section 2: Solution Spaces
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 10
-                
-                Text {
-                    text: "SOLUTION SPACES TO CONSIDER"
-                    color: ui.theme.accentColor
-                    font.pixelSize: 16
-                    font.bold: true
+                spacing: 12
+
+                RowLayout {
+                    spacing: 8
+                    Rectangle { width: 4; height: 18; radius: 2; color: ui.theme.accentColor }
+                    Text {
+                        text: "SOLUTION SPACES"
+                        color: ui.theme.fontPrimaryColor
+                        font.pixelSize: 13
+                        font.bold: true
+                        font.letterSpacing: 1.5
+                    }
                 }
-                
+
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 2
-                    color: ui.theme.strokeColor
+                    Layout.leftMargin: 12
+                    height: 1
+                    color: ui.theme.accentColor
+                    opacity: 0.3
                 }
-                
+
                 Repeater {
                     model: diagnosticData ? diagnosticData.solutions : []
-                    
+
                     RowLayout {
                         Layout.fillWidth: true
+                        Layout.leftMargin: 12
                         spacing: 10
-                        
-                        Text {
-                            text: "•"
+
+                        Rectangle {
+                            width: 6; height: 6; radius: 3
                             color: ui.theme.accentColor
-                            font.pixelSize: 16
                             Layout.alignment: Qt.AlignTop
+                            Layout.topMargin: 6
                         }
-                        
+
                         TextEdit {
                             text: modelData
                             color: ui.theme.fontPrimaryColor
-                            font.pixelSize: 15
+                            font.pixelSize: 14
                             wrapMode: TextEdit.WordWrap
                             Layout.fillWidth: true
                             readOnly: true
                             selectByMouse: true
                             textFormat: TextEdit.PlainText
+                            lineHeight: 1.3
                         }
                     }
                 }
             }
-            
+
             // Section 3: Learning Resources
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 15
-                
-                Text {
-                    text: "LEARN MORE"
-                    color: ui.theme.accentColor
-                    font.pixelSize: 16
-                    font.bold: true
+
+                RowLayout {
+                    spacing: 8
+                    Rectangle { width: 4; height: 18; radius: 2; color: ui.theme.accentColor }
+                    Text {
+                        text: "LEARN MORE"
+                        color: ui.theme.fontPrimaryColor
+                        font.pixelSize: 13
+                        font.bold: true
+                        font.letterSpacing: 1.5
+                    }
                 }
-                
+
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 2
-                    color: ui.theme.strokeColor
+                    Layout.leftMargin: 12
+                    height: 1
+                    color: ui.theme.accentColor
+                    opacity: 0.3
                 }
                 
                 // OpenMusicTheory link
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 60
-                    color: linkMouseArea.containsMouse ? ui.theme.strokeColorlight : ui.theme.buttonColor
-                    border.color: ui.theme.accentColor
-                    border.width: 1
-                    radius: 4
-                    
+                    Layout.leftMargin: 12
+                    Layout.preferredHeight: omtContent.implicitHeight + 24
+                    color: linkMouseArea.containsMouse ? ui.theme.backgroundTertiaryColor : ui.theme.buttonColor
+                    border.color: linkMouseArea.containsMouse ? ui.theme.accentColor : ui.theme.strokeColor
+                    border.width: linkMouseArea.containsMouse ? 2 : 1
+                    radius: 6
+
+                    Behavior on border.color { ColorAnimation { duration: 120 } }
+                    Behavior on color { ColorAnimation { duration: 120 } }
+
                     MouseArea {
                         id: linkMouseArea
                         anchors.fill: parent
@@ -2604,61 +2694,78 @@ MuseScore {
                             }
                         }
                     }
-                    
+
                     RowLayout {
+                        id: omtContent
                         anchors.fill: parent
                         anchors.margins: 12
-                        spacing: 10
-                        
+                        spacing: 12
+
                         Text {
                             text: "📖"
-                            font.pixelSize: 26
+                            font.pixelSize: 24
                         }
-                        
+
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 2
-                            
+
                             Text {
-                                text: "OpenMusicTheory: " + (diagnosticData ? diagnosticData.omtTitle : "")
+                                text: diagnosticData ? diagnosticData.omtTitle : ""
                                 color: ui.theme.fontPrimaryColor
-                                font.pixelSize: 17
-                                font.bold: true
-                            }
-                            
-                            Text {
-                                text: "Click to open in browser"
-                                color: ui.theme.fontSecondaryColor
                                 font.pixelSize: 15
+                                font.bold: true
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                            }
+
+                            Text {
+                                text: "Open in browser  ›"
+                                color: ui.theme.accentColor
+                                font.pixelSize: 12
                             }
                         }
                     }
                 }
-                
+
                 // Recommended readings
                 ColumnLayout {
                     Layout.fillWidth: true
+                    Layout.leftMargin: 12
                     spacing: 8
-                    
+
                     Text {
-                        text: "📚 Recommended Reading:"
+                        text: "📚 Recommended Reading"
                         color: ui.theme.fontPrimaryColor
-                        font.pixelSize: 17
+                        font.pixelSize: 15
                         font.bold: true
                     }
-                    
+
                     Repeater {
                         model: diagnosticData ? diagnosticData.readings : []
-                        
-                        TextEdit {
-                            text: "   • " + modelData
-                            color: ui.theme.fontPrimaryColor
-                            font.pixelSize: 14
-                            wrapMode: TextEdit.WordWrap
+
+                        RowLayout {
                             Layout.fillWidth: true
-                            readOnly: true
-                            selectByMouse: true
-                            textFormat: TextEdit.PlainText
+                            spacing: 8
+
+                            Rectangle {
+                                width: 5; height: 5; radius: 3
+                                color: ui.theme.fontSecondaryColor
+                                Layout.alignment: Qt.AlignTop
+                                Layout.topMargin: 6
+                            }
+
+                            TextEdit {
+                                text: modelData
+                                color: ui.theme.fontPrimaryColor
+                                font.pixelSize: 13
+                                wrapMode: TextEdit.WordWrap
+                                Layout.fillWidth: true
+                                readOnly: true
+                                selectByMouse: true
+                                textFormat: TextEdit.PlainText
+                                lineHeight: 1.2
+                            }
                         }
                     }
                 }
