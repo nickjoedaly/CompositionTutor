@@ -1,6 +1,8 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import Muse.Ui 1.0
+import Muse.UiComponents 1.0 as MU
 import MuseScore 3.0
 
 MuseScore {
@@ -16,43 +18,7 @@ MuseScore {
     // Make dialog resizable (both properties needed)
     property bool requiresResize: true
     
-    // System palette for light/dark mode support
-    SystemPalette { id: systemPalette; colorGroup: SystemPalette.Active }
-    
-    // Custom button component since StyledButton isn't available
-    Component {
-        id: customButton
-        
-        Rectangle {
-            property string text: ""
-            property bool enabled: true
-            signal clicked()
-            
-            id: buttonRect
-            height: 40
-            color: enabled ? (buttonMouseArea.containsMouse ? "#4a9eff" : "#3a7acc") : "#555555"
-            radius: 6
-            border.color: enabled ? "#5aafff" : "#666666"
-            border.width: 1
-            
-            Text {
-                anchors.centerIn: parent
-                text: buttonRect.text
-                color: buttonRect.enabled ? "#ffffff" : "#999999"
-                font.pixelSize: 14
-                font.bold: false
-            }
-            
-            MouseArea {
-                id: buttonMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                enabled: buttonRect.enabled
-                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onClicked: buttonRect.clicked()
-            }
-        }
-    }
+    // Native MuseScore theme is provided by ui.theme via Muse.Ui
     
     // State variables
     property var currentQuestion: null
@@ -2282,7 +2248,7 @@ MuseScore {
     // Main UI
     Rectangle {
         anchors.fill: parent
-        color: systemPalette.window
+        color: ui.theme.backgroundPrimaryColor
         
         ColumnLayout {
             anchors.fill: parent
@@ -2293,10 +2259,10 @@ MuseScore {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 80
-                color: systemPalette.base
+                color: ui.theme.backgroundSecondaryColor
                 radius: 4
                 border.width: 1
-                border.color: systemPalette.mid
+                border.color: ui.theme.strokeColor
                 
                 ColumnLayout {
                     anchors.fill: parent
@@ -2305,14 +2271,14 @@ MuseScore {
                     
                     Text {
                         text: "Composition Tutor"
-                        color: systemPalette.text
+                        color: ui.theme.fontPrimaryColor
                         font.pixelSize: 22
                         font.bold: true
                     }
                     
                     Text {
                         text: selectionInfo !== "" ? selectionInfo : "No passage selected"
-                        color: selectionInfo !== "" ? systemPalette.text : "#ff6b6b"
+                        color: selectionInfo !== "" ? ui.theme.fontPrimaryColor : "#ff6b6b"
                         font.pixelSize: 14
                     }
                 }
@@ -2325,10 +2291,10 @@ MuseScore {
                 Layout.fillWidth: true
                 //Layout.fillHeight: true
                 Layout.preferredHeight: 600
-                color: systemPalette.base
+                color: ui.theme.backgroundSecondaryColor
                 radius: 4
                 border.width: 1
-                border.color: systemPalette.mid
+                border.color: ui.theme.strokeColor
                 
                 ScrollView {
                     anchors.fill: parent
@@ -2355,37 +2321,29 @@ MuseScore {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 60
                 Layout.minimumHeight: 60
-                color: systemPalette.base
+                color: ui.theme.backgroundSecondaryColor
                 radius: 4
                 border.width: 1
-                border.color: systemPalette.mid
+                border.color: ui.theme.strokeColor
                 
                 RowLayout {
                     anchors.fill: parent
                     anchors.margins: 10
                     spacing: 10
                     
-                    Loader {
-                        sourceComponent: customButton
+                    MU.FlatButton {
+                        text: "← Back"
+                        enabled: questionHistory.length > 0
                         Layout.preferredWidth: 120
-                        onLoaded: {
-                            item.text = "← Back"
-                            item.enabled = Qt.binding(function() { 
-                                return questionHistory.length > 0
-                            })
-                            item.clicked.connect(goBack)
-                        }
+                        onClicked: goBack()
                     }
-                    
+
                     Item { Layout.fillWidth: true }
-                    
-                    Loader {
-                        sourceComponent: customButton
+
+                    MU.FlatButton {
+                        text: "Reset"
                         Layout.preferredWidth: 120
-                        onLoaded: {
-                            item.text = "Reset"
-                            item.clicked.connect(resetTool)
-                        }
+                        onClicked: resetTool()
                     }
                 }
             }
@@ -2402,7 +2360,7 @@ MuseScore {
             
             Text {
                 text: currentQuestion ? currentQuestion.text : ""
-                color: systemPalette.text
+                color: ui.theme.fontPrimaryColor
                 font.pixelSize: 20
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
@@ -2425,8 +2383,8 @@ MuseScore {
                     Layout.maximumWidth: 300
                     Layout.minimumHeight: 60
                     Layout.preferredHeight: contentCol.implicitHeight + 30
-                    color: optionMouseArea.containsMouse ? systemPalette.midlight : systemPalette.button
-                    border.color: systemPalette.mid
+                    color: optionMouseArea.containsMouse ? ui.theme.strokeColorlight : ui.theme.buttonColor
+                    border.color: ui.theme.strokeColor
                     border.width: 1
                     radius: 6
                     
@@ -2446,7 +2404,7 @@ MuseScore {
                         
                         Text {
                             text: modelData.text
-                            color: systemPalette.text
+                            color: ui.theme.fontPrimaryColor
                             font.pixelSize: 17
                             font.bold: modelData.subtitle === ""
                             wrapMode: Text.WordWrap
@@ -2455,7 +2413,7 @@ MuseScore {
                         
                         Text {
                             text: modelData.subtitle
-                            color: systemPalette.dark
+                            color: ui.theme.fontSecondaryColor
                             font.pixelSize: 14
                             visible: modelData.subtitle !== ""
                             wrapMode: Text.WordWrap
@@ -2466,39 +2424,37 @@ MuseScore {
             }
             
             // Text input for freeform questions
-            Column {
+            ColumnLayout {
                 visible: currentQuestion && currentQuestion.type === "text_input"
                 Layout.fillWidth: true
                 spacing: 10
-                
+
                 Rectangle {
-                    width: parent.width
+                    Layout.fillWidth: true
                     height: 120
-                    color: systemPalette.base
-                    border.color: systemPalette.mid
+                    color: ui.theme.backgroundSecondaryColor
+                    border.color: ui.theme.strokeColor
                     border.width: 1
                     radius: 4
-                    
+
                     TextArea {
                         id: freeformInput
                         anchors.fill: parent
                         anchors.margins: 10
-                        color: systemPalette.text
+                        color: ui.theme.fontPrimaryColor
                         wrapMode: TextArea.Wrap
                         selectByMouse: true
                         placeholderText: "Describe what feels wrong about this passage..."
                         background: Rectangle { color: "transparent" }
                     }
                 }
-                
-                Loader {
-                    sourceComponent: customButton
-                    width: 150
-                    anchors.right: parent.right
-                    onLoaded: {
-                        item.text = "Continue →"
-                        item.clicked.connect(submitFreeformAnswer)
-                    }
+
+                MU.FlatButton {
+                    text: "Continue →"
+                    accentButton: true
+                    Layout.preferredWidth: 150
+                    Layout.alignment: Qt.AlignRight
+                    onClicked: submitFreeformAnswer()
                 }
             }
             
@@ -2506,23 +2462,21 @@ MuseScore {
             Text {
                 visible: currentQuestion && currentQuestion.type === "placeholder"
                 text: currentQuestion ? currentQuestion.text : ""
-                color: systemPalette.text
+                color: ui.theme.fontPrimaryColor
                 font.pixelSize: 14
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
             
-            Loader {
+            MU.FlatButton {
                 visible: currentQuestion && currentQuestion.type === "placeholder"
-                sourceComponent: customButton
+                text: "Continue to Discussion"
+                accentButton: true
                 Layout.preferredWidth: 200
-                onLoaded: {
-                    item.text = "Continue to Discussion"
-                    item.clicked.connect(function() {
-                        if (currentQuestion) {
-                            generateDiagnostic(currentQuestion.next)
-                        }
-                    })
+                onClicked: {
+                    if (currentQuestion) {
+                        generateDiagnostic(currentQuestion.next)
+                    }
                 }
             }
         }
@@ -2543,7 +2497,7 @@ MuseScore {
                 
                 Text {
                     text: "DIAGNOSTIC REFRAMING"
-                    color: "#4a9eff"
+                    color: ui.theme.accentColor
                     font.pixelSize: 16
                     font.bold: true
                 }
@@ -2551,12 +2505,12 @@ MuseScore {
                 Rectangle {
                     Layout.fillWidth: true
                     height: 2
-                    color: systemPalette.mid
+                    color: ui.theme.strokeColor
                 }
                 
                 TextEdit {
                     text: diagnosticData ? diagnosticData.reframing : ""
-                    color: systemPalette.text
+                    color: ui.theme.fontPrimaryColor
                     font.pixelSize: 16
                     wrapMode: TextEdit.WordWrap
                     Layout.fillWidth: true
@@ -2573,7 +2527,7 @@ MuseScore {
                 
                 Text {
                     text: "SOLUTION SPACES TO CONSIDER"
-                    color: "#4a9eff"
+                    color: ui.theme.accentColor
                     font.pixelSize: 16
                     font.bold: true
                 }
@@ -2581,7 +2535,7 @@ MuseScore {
                 Rectangle {
                     Layout.fillWidth: true
                     height: 2
-                    color: systemPalette.mid
+                    color: ui.theme.strokeColor
                 }
                 
                 Repeater {
@@ -2593,14 +2547,14 @@ MuseScore {
                         
                         Text {
                             text: "•"
-                            color: "#4a9eff"
+                            color: ui.theme.accentColor
                             font.pixelSize: 16
                             Layout.alignment: Qt.AlignTop
                         }
                         
                         TextEdit {
                             text: modelData
-                            color: systemPalette.text
+                            color: ui.theme.fontPrimaryColor
                             font.pixelSize: 15
                             wrapMode: TextEdit.WordWrap
                             Layout.fillWidth: true
@@ -2619,7 +2573,7 @@ MuseScore {
                 
                 Text {
                     text: "LEARN MORE"
-                    color: "#4a9eff"
+                    color: ui.theme.accentColor
                     font.pixelSize: 16
                     font.bold: true
                 }
@@ -2627,15 +2581,15 @@ MuseScore {
                 Rectangle {
                     Layout.fillWidth: true
                     height: 2
-                    color: systemPalette.mid
+                    color: ui.theme.strokeColor
                 }
                 
                 // OpenMusicTheory link
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 60
-                    color: linkMouseArea.containsMouse ? systemPalette.midlight : systemPalette.button
-                    border.color: "#4a9eff"
+                    color: linkMouseArea.containsMouse ? ui.theme.strokeColorlight : ui.theme.buttonColor
+                    border.color: ui.theme.accentColor
                     border.width: 1
                     radius: 4
                     
@@ -2667,14 +2621,14 @@ MuseScore {
                             
                             Text {
                                 text: "OpenMusicTheory: " + (diagnosticData ? diagnosticData.omtTitle : "")
-                                color: systemPalette.text
+                                color: ui.theme.fontPrimaryColor
                                 font.pixelSize: 17
                                 font.bold: true
                             }
                             
                             Text {
                                 text: "Click to open in browser"
-                                color: systemPalette.dark
+                                color: ui.theme.fontSecondaryColor
                                 font.pixelSize: 15
                             }
                         }
@@ -2688,7 +2642,7 @@ MuseScore {
                     
                     Text {
                         text: "📚 Recommended Reading:"
-                        color: systemPalette.text
+                        color: ui.theme.fontPrimaryColor
                         font.pixelSize: 17
                         font.bold: true
                     }
@@ -2698,7 +2652,7 @@ MuseScore {
                         
                         TextEdit {
                             text: "   • " + modelData
-                            color: systemPalette.text
+                            color: ui.theme.fontPrimaryColor
                             font.pixelSize: 14
                             wrapMode: TextEdit.WordWrap
                             Layout.fillWidth: true
@@ -2710,14 +2664,12 @@ MuseScore {
                 }
                 
                 // Claude AI discussion button
-                Loader {
-                    sourceComponent: customButton
+                MU.FlatButton {
+                    text: "💬 Discuss with Claude AI"
+                    accentButton: true
                     Layout.preferredWidth: 250
                     Layout.alignment: Qt.AlignHCenter
-                    onLoaded: {
-                        item.text = "💬 Discuss with Claude AI"
-                        item.clicked.connect(openClaudeDiscussion)
-                    }
+                    onClicked: openClaudeDiscussion()
                 }
             }
         }
@@ -2747,15 +2699,24 @@ MuseScore {
         }
         
         var startMeasure = cursor.measure ? cursor.measure.no + 1 : "?"
-        var staff = cursor.staffIdx + 1
-        
+        var startStaff = cursor.staffIdx + 1
+
         cursor.rewind(2) // End of selection
         var endMeasure = cursor.measure ? cursor.measure.no + 1 : startMeasure
-        
-        if (startMeasure === endMeasure) {
-            selectionInfo = "Selected: Measure " + startMeasure + ", Staff " + staff
+        var endStaff = cursor.staffIdx + 1
+
+        // Build staff string — handle multi-staff selections
+        var staffStr
+        if (startStaff === endStaff) {
+            staffStr = "Staff " + startStaff
         } else {
-            selectionInfo = "Selected: Measures " + startMeasure + "-" + endMeasure + ", Staff " + staff
+            staffStr = "Staves " + startStaff + "-" + endStaff
+        }
+
+        if (startMeasure === endMeasure) {
+            selectionInfo = "Selected: Measure " + startMeasure + ", " + staffStr
+        } else {
+            selectionInfo = "Selected: Measures " + startMeasure + "-" + endMeasure + ", " + staffStr
         }
     }
     
